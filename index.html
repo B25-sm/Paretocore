@@ -608,6 +608,7 @@
     html += '<div class="sec-head"><span class="sec-title">Current landscape</span><span class="sec-meta">live · ' + new Date().getFullYear() + ' · source-backed</span><span class="sec-rule"></span></div>';
     html += '<div class="loading-block" id="landscape-body" aria-busy="true">' + skeletonCard() + '</div></div>';
 
+    html += '<div id="market-sec"></div>';
     html += '<div id="extra-secs"></div>';
 
     if (state.sources.length) {
@@ -640,6 +641,7 @@
     var data = state.data || {};
     var stable = Array.isArray(data.stable_core) ? data.stable_core : [];
     var current = Array.isArray(data.current_landscape) ? data.current_landscape : [];
+    var market = Array.isArray(data.market_signal) ? data.market_signal : [];
     var cuts = Array.isArray(data.explicitly_deprioritized) ? data.explicitly_deprioritized : [];
 
     var subjectText = $("subject-text"), subjectSub = $("subject-sub");
@@ -691,6 +693,32 @@
           ? "Search returned nothing usable for this one — try a broader field name."
           : "Run with “Fetch live sources” on to pull what's trending, latest versions, and recent shifts.";
         landscapeBody.innerHTML = '<div class="empty-note">No current-landscape items. ' + esc(reason) + '</div>';
+      }
+    }
+
+    // job market / compensation signal — only rendered when the model actually
+    // returned something (goal implied career intent AND sources backed it up).
+    // No section, no "not applicable" placeholder — silence is the honest default.
+    var marketSec = $("market-sec");
+    if (marketSec) {
+      if (market.length) {
+        var mh = '<div class="sec-head"><span class="sec-title">Market signal</span><span class="sec-meta">job demand &amp; compensation, source-backed</span><span class="sec-rule"></span></div>';
+        market.forEach(function (it) {
+          mh += '<article class="card">';
+          mh += '<div class="card-top"><span class="card-item">' + esc(it.aspect || "Market signal") + '</span></div>';
+          if (it.summary) mh += '<p class="card-what">' + esc(it.summary) + '</p>';
+          if (it.source_url) {
+            mh += '<a class="src-pill" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">' +
+                    esc(domainOf(it.source_url)) + ' ↗' +
+                    (it.source_date ? ' <span class="dt">· ' + esc(it.source_date) + '</span>' : '') + '</a>';
+          }
+          mh += '</article>';
+        });
+        marketSec.innerHTML = mh;
+        marketSec.className = "sec";
+      } else {
+        marketSec.innerHTML = "";
+        marketSec.className = "";
       }
     }
 
@@ -816,6 +844,7 @@
       data: {
         stable_core: data.stable_core || [],
         current_landscape: data.current_landscape || [],
+        market_signal: data.market_signal || [],
         explicitly_deprioritized: data.explicitly_deprioritized || [],
         caveats: data.caveats || ""
       },
@@ -838,6 +867,7 @@
     var data = state.data || {};
     var stable = Array.isArray(data.stable_core) ? data.stable_core : [];
     var current = Array.isArray(data.current_landscape) ? data.current_landscape : [];
+    var market = Array.isArray(data.market_signal) ? data.market_signal : [];
     var cuts = Array.isArray(data.explicitly_deprioritized) ? data.explicitly_deprioritized : [];
     var lines = [];
 
@@ -873,6 +903,18 @@
     } else {
       lines.push("_No current-landscape items._");
       lines.push("");
+    }
+
+    if (market.length) {
+      lines.push("## Market signal");
+      lines.push("");
+      market.forEach(function (it) {
+        var head = "- **" + (it.aspect || "Market signal") + "**";
+        if (it.source_url) head += " — [source](" + it.source_url + ")" + (it.source_date ? " (" + it.source_date + ")" : "");
+        lines.push(head);
+        if (it.summary) lines.push("  " + it.summary);
+        lines.push("");
+      });
     }
 
     if (cuts.length) {
