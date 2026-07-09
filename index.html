@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pareto · Core Finder — find the 20% that matters</title>
+<meta name="description" content="Enter any field, tool, or skill and get the ~20% of concepts and tools that drive ~80% of real-world impact — a stable core plus a source-backed current landscape, with honest confidence labels." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Pareto · Core Finder — find the 20% that matters" />
+<meta property="og:description" content="Enter any field, tool, or skill and get the ~20% that drives ~80% of real-world impact — split into timeless fundamentals and a source-backed current landscape." />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Pareto · Core Finder — find the 20% that matters" />
+<meta name="twitter:description" content="The 20% of any field that drives 80% of real-world impact — timeless fundamentals plus a source-backed current landscape." />
+<!-- Note: this is a static, build-step-free page, so Open Graph tags can't vary
+     per shared query without server-side rendering — out of scope for this pass.
+     The tab title (document.title) still updates client-side per query. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314202E'/%3E%3Ctext x='16' y='23' font-family='monospace' font-weight='700' font-size='19' fill='%230E7C8B' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #EDF0F3;
+    --surface: #FFFFFF;
+    --surface-2: #F6F8FA;
+    --ink: #14202E;
+    --ink-2: #47566B;
+    --ink-3: #8A97A7;
+    --line: #DBE2E9;
+    --line-2: #E9EEF2;
+    --accent: #0E7C8B;
+    --accent-ink: #0A5763;
+    --accent-soft: #E1F0F2;
+    --hi: #178A6E;   --hi-soft: #E3F3ED;
+    --med: #A9760F;  --med-soft: #F5EDD8;
+    --lo: #B0483A;   --lo-soft: #F5E5E2;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --shadow: 0 1px 2px rgba(20,32,46,.04), 0 8px 24px -12px rgba(20,32,46,.14);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--ink);
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(rgba(20,40,60,.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(20,40,60,.028) 1px, transparent 1px);
+    background-size: 26px 26px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  .wrap { max-width: 840px; margin: 0 auto; padding: 0 22px 96px; }
+
+  /* ---- header ---- */
+  .masthead {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 26px 0 20px;
+  }
+  .mark { display: flex; align-items: center; gap: 11px; }
+  .mark-badge {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: var(--ink); color: #fff;
+    display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 600; font-size: 15px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  }
+  .mark-name { font-family: var(--mono); font-weight: 600; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; }
+  .mark-name span { color: var(--accent-ink); }
+  .masthead .tag { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); letter-spacing: .04em; }
+
+  /* ---- hero ---- */
+  .hero { padding: 28px 0 30px; opacity: 0; transform: translateY(6px); animation: rise .5s .05s ease forwards; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 16px; }
+  .hero h1 {
+    font-size: clamp(30px, 5.4vw, 46px);
+    font-weight: 700; line-height: 1.04; letter-spacing: -.02em;
+    margin: 0 0 16px; max-width: 15ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent-ink); }
+  .hero p.lede { font-size: 16.5px; color: var(--ink-2); margin: 0; max-width: 56ch; }
+
+  /* ---- console / input ---- */
+  .console {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow);
+    padding: 22px; margin-top: 6px;
+  }
+  .field-block { margin-bottom: 14px; }
+  .field-block:last-of-type { margin-bottom: 0; }
+  .fl { display: block; font-family: var(--mono); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 7px; }
+  .fl .opt { color: var(--ink-3); text-transform: none; letter-spacing: 0; font-size: 11px; }
+  .txt {
+    width: 100%; font-family: var(--sans); font-size: 16px; color: var(--ink);
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 13px 14px; transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .txt::placeholder { color: var(--ink-3); }
+  .txt:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+  .toggle { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; max-width: 60%; }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch { flex: 0 0 auto; width: 38px; height: 22px; border-radius: 22px; background: var(--line); position: relative; transition: background .18s; margin-top: 1px; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .18s; }
+  .toggle input:checked + .switch { background: var(--accent); }
+  .toggle input:checked + .switch::after { transform: translateX(16px); }
+  .toggle input:focus-visible + .switch { box-shadow: 0 0 0 3px var(--accent-soft); }
+  .toggle .lbl { font-size: 13.5px; color: var(--ink); line-height: 1.35; }
+  .toggle .lbl small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 1px; }
+
+  .go {
+    font-family: var(--sans); font-weight: 600; font-size: 15px; color: #fff;
+    background: var(--ink); border: none; border-radius: 10px; padding: 13px 20px;
+    cursor: pointer; transition: transform .12s, background .15s, opacity .15s;
+    display: inline-flex; align-items: center; gap: 9px; white-space: nowrap;
+  }
+  .go:hover { background: #0b1622; }
+  .go:active { transform: translateY(1px); }
+  .go:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .go:disabled { opacity: .62; cursor: default; }
+  .go .arr { transition: transform .15s; }
+  .go:hover .arr { transform: translateX(2px); }
+  .dots::after { content: ""; animation: dots 1.4s steps(4, end) infinite; }
+
+  /* ---- preset chips ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 2px; }
+  .chip {
+    font-family: var(--mono); font-size: 12.5px; color: var(--ink-2);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 20px;
+    padding: 6px 12px; cursor: pointer; transition: border-color .15s, color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-soft); }
+  .chip:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  /* ---- empty state ---- */
+  .empty-state { margin-top: 26px; padding: 16px 18px; border: 1px dashed var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; }
+  .empty-state.hidden { display: none; }
+
+  /* ---- signature: the 20/80 ratio bar ---- */
+  .ratio { margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--line); }
+  .ratio-track { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--surface-2); border: 1px solid var(--line); }
+  .ratio-vital { width: 0; background: var(--accent); transition: width .8s cubic-bezier(.2,.7,.2,1); }
+  .ratio-tail { flex: 1; background-image: repeating-linear-gradient(135deg, #E3E9EF 0 6px, #EDF1F5 6px 12px); }
+  .ratio-labels { display: flex; justify-content: space-between; margin-top: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .03em; }
+  .ratio-labels .v { color: var(--accent-ink); }
+  .ratio-labels .t { color: var(--ink-3); }
+
+  /* ---- status / errors ---- */
+  .status { margin-top: 18px; font-family: var(--mono); font-size: 13px; color: var(--ink-2); display: none; align-items: center; gap: 10px; }
+  .status.on { display: flex; }
+  .scan { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent-soft); animation: pulse 1.3s ease-out infinite; }
+
+  .banner { margin-top: 16px; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; display: none; }
+  .banner.on { display: block; }
+  .banner.err { background: var(--lo-soft); border: 1px solid #E7C4bd; color: #7f2f22; }
+  .banner.warn { background: var(--med-soft); border: 1px solid #E6D3a3; color: #7a5608; }
+  .banner b { font-weight: 600; }
+
+  /* ---- results ---- */
+  .results { margin-top: 34px; display: none; }
+  .results.on { display: block; animation: rise .45s ease; }
+
+  .rhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .rhead .subject { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .rhead .subject small { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--ink-3); letter-spacing: .02em; margin-top: 3px; }
+  .rhead-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .copy-btn { font-family: var(--mono); font-size: 12px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px; cursor: pointer; transition: border-color .15s, color .15s, opacity .15s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent-ink); }
+  .copy-btn:disabled { opacity: .5; cursor: default; }
+
+  .sec { margin-bottom: 30px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .sec-title { font-family: var(--mono); font-size: 12px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink); font-weight: 600; }
+  .sec-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+  .sec-rule { flex: 1; height: 1px; background: var(--line); }
+
+  /* stable core cards */
+  .card {
+    position: relative; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px 16px 20px; margin-bottom: 12px;
+    overflow: hidden; transition: box-shadow .15s, transform .15s, border-color .15s;
+  }
+  .card:hover { box-shadow: var(--shadow); border-color: var(--line-2); }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ink-3); }
+  .card.c-high::before { background: var(--hi); }
+  .card.c-medium::before { background: var(--med); }
+  .card.c-low::before { background: var(--lo); }
+
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .card-title-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .step { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--ink-3); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+  .card-item { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -.005em; }
+  .conf { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+  .conf.c-high { background: var(--hi-soft); color: var(--hi); }
+  .conf.c-medium { background: var(--med-soft); color: var(--med); }
+  .conf.c-low { background: var(--lo-soft); color: var(--lo); }
+
+  .card-what { font-size: 14.5px; color: var(--ink); margin: 0 0 7px; }
+  .card-why { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+  .card-why b { color: var(--ink); font-weight: 600; }
+
+  .src-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 20px; padding: 4px 10px; text-decoration: none; max-width: 100%; }
+  .src-pill:hover { text-decoration: underline; }
+  .src-pill .dt { color: var(--ink-3); }
+
+  .empty-note { font-size: 13.5px; color: var(--ink-2); background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px; padding: 13px 15px; }
+
+  /* deprioritized chips */
+  .cuts { display: flex; flex-wrap: wrap; gap: 9px; }
+  .cut {
+    font-size: 13px; color: var(--ink-3); background: var(--surface-2);
+    border: 1px dashed var(--line); border-radius: 8px; padding: 7px 11px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .cut .x { font-family: var(--mono); font-size: 10px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  .cut span.t { text-decoration: line-through; text-decoration-color: var(--ink-3); }
+
+  /* caveats */
+  .caveat { font-size: 14px; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--med); border-radius: 10px; padding: 15px 17px; }
+
+  /* sources searched */
+  .srclist { list-style: none; margin: 0; padding: 0; }
+  .srclist li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-2); font-size: 13.5px; }
+  .srclist li:last-child { border-bottom: none; }
+  .srclist .n { font-family: var(--mono); font-size: 12px; color: var(--ink-3); flex: 0 0 auto; width: 20px; }
+  .srclist .body { min-width: 0; }
+  .srclist .ttl { color: var(--ink); display: inline; }
+  .srclist .dom { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
+  .foot { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); line-height: 1.6; }
+  .foot b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---- loading skeletons (progressive reveal) ---- */
+  .loading-block { display: flex; flex-direction: column; gap: 12px; }
+  .skeleton-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .sk-line { height: 10px; border-radius: 5px; margin-bottom: 8px; background: linear-gradient(90deg, var(--line-2) 25%, var(--line) 37%, var(--line-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; }
+  .sk-line:last-child { margin-bottom: 0; }
+  .sk-line.w40 { width: 40%; }
+  .sk-line.w60 { width: 60%; }
+  .sk-line.w90 { width: 90%; }
+
+  /* animations */
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(14,124,139,.4); } 70% { box-shadow: 0 0 0 8px rgba(14,124,139,0); } 100% { box-shadow: 0 0 0 0 rgba(14,124,139,0); } }
+  @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+  @media (max-width: 560px) {
+    .toggle { max-width: 100%; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .go { justify-content: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    .ratio-vital { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="mark">
+      <div class="mark-badge">P</div>
+      <div class="mark-name">Pareto<span>·</span>Core</div>
+    </div>
+    <div class="tag">the vital few, found fast</div>
+  </header>
+
+  <section class="hero">
+    <p class="eyebrow">Learning-prioritization analyst</p>
+    <h1>Find the 20% that does <em>the 80%</em>.</h1>
+    <p class="lede">Name any field, tool, or skill. Get back the small core worth learning first — split into timeless fundamentals and the current landscape, with confidence labelled honestly and every live claim linked to a source you can check.</p>
+  </section>
+
+  <section class="console" aria-label="Analysis input">
+    <div class="field-block">
+      <label class="fl" for="field">Field / technology / skill</label>
+      <input class="txt" id="field" type="text" autocomplete="off"
+             placeholder="e.g. React · Kubernetes · statistics · Rust · digital marketing" />
+    </div>
+    <div class="field-block">
+      <label class="fl" for="goal">Your goal <span class="opt">— optional, sharpens the answer</span></label>
+      <input class="txt" id="goal" type="text" autocomplete="off"
+             placeholder="e.g. building web apps · passing interviews · research" />
+    </div>
+
+    <div class="chips" id="chips" aria-label="Try an example field">
+      <button type="button" class="chip" data-field="React">React</button>
+      <button type="button" class="chip" data-field="Node.js">Node.js</button>
+      <button type="button" class="chip" data-field="PostgreSQL">PostgreSQL</button>
+      <button type="button" class="chip" data-field="TypeScript">TypeScript</button>
+      <button type="button" class="chip" data-field="Docker">Docker</button>
+      <button type="button" class="chip" data-field="System Design">System Design</button>
+      <button type="button" class="chip" data-field="Data Structures &amp; Algorithms">Data Structures &amp; Algorithms</button>
+      <button type="button" class="chip" data-field="Python">Python</button>
+    </div>
+
+    <div class="controls">
+      <label class="toggle" for="live">
+        <input type="checkbox" id="live" checked />
+        <span class="switch" aria-hidden="true"></span>
+        <span class="lbl">Fetch live sources
+          <small>Turn off for timeless fundamentals (math, algorithms, design patterns)</small>
+        </span>
+      </label>
+      <button class="go" id="go" type="button">
+        <span id="go-label">Find the core</span>
+        <span class="arr" aria-hidden="true">→</span>
+      </button>
+    </div>
+
+    <div class="ratio" aria-hidden="true">
+      <div class="ratio-track">
+        <div class="ratio-vital" id="ratio-vital"></div>
+        <div class="ratio-tail"></div>
+      </div>
+      <div class="ratio-labels">
+        <span class="v">20% · the vital few</span>
+        <span class="t">80% · the long tail</span>
+      </div>
+    </div>
+
+    <div class="status" id="status"><span class="scan"></span><span id="status-text">Working</span><span class="dots"></span></div>
+    <div class="banner" id="banner"></div>
+  </section>
+
+  <div class="empty-state" id="empty-state">Type a field, tool, or skill above — or pick one of the examples — to get the 20% that drives 80% of real-world results, split into timeless fundamentals and what's current right now.</div>
+
+  <section class="results" id="results" aria-live="polite"></section>
+
+  <footer class="foot" id="foot"></footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fieldEl = $("field"), goalEl = $("goal"), liveEl = $("live"),
+      goEl = $("go"), goLabel = $("go-label"),
+      statusEl = $("status"), statusText = $("status-text"),
+      bannerEl = $("banner"), resultsEl = $("results"), footEl = $("foot"),
+      ratioVital = $("ratio-vital"), emptyStateEl = $("empty-state"),
+      chipsEl = $("chips");
+
+  var STATUS_LIVE = ["Searching the web", "Reading sources", "Finding the vital few", "Weighing confidence"];
+  var STATUS_STABLE = ["Recalling fundamentals", "Finding the vital few", "Weighing confidence"];
+  var statusTimer = null;
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function domainOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ""); }
+    catch (e) { return url || ""; }
+  }
+  function confClass(c) {
+    var v = String(c || "").toLowerCase();
+    if (v.indexOf("high") > -1) return "c-high";
+    if (v.indexOf("low") > -1) return "c-low";
+    return "c-medium";
+  }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function setBanner(kind, html) {
+    bannerEl.className = "banner on " + kind;
+    bannerEl.innerHTML = html;
+  }
+  function clearBanner() { bannerEl.className = "banner"; bannerEl.innerHTML = ""; }
+
+  function cycleStatus(list) {
+    var i = 0;
+    statusText.textContent = list[0];
+    statusEl.className = "status on";
+    statusTimer = setInterval(function () {
+      i = (i + 1) % list.length;
+      statusText.textContent = list[i];
+    }, 2400);
+  }
+  function stopStatus() {
+    if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+    statusEl.className = "status";
+  }
+
+  function setBusy(busy, live) {
+    goEl.disabled = busy;
+    goLabel.textContent = busy ? "Finding the core" : "Find the core";
+    goEl.querySelector(".arr").style.display = busy ? "none" : "";
+    if (busy) { cycleStatus(live ? STATUS_LIVE : STATUS_STABLE); }
+    else { stopStatus(); }
+  }
+
+  function copyText(text, btn, label) {
+    navigator.clipboard.writeText(text).then(function () {
+      btn.textContent = "Copied ✓";
+      setTimeout(function () { btn.textContent = label; }, 1600);
+    }, function () {
+      btn.textContent = "Copy failed";
+      setTimeout(function () { btn.textContent = label; }, 1600);
+    });
+  }
+
+  // ---- URL state (P0.1) --------------------------------------------------
+  function updateUrl(field, goal, live) {
+    var params = new URLSearchParams();
+    params.set("field", field);
+    if (goal) params.set("goal", goal);
+    params.set("live", live ? "1" : "0");
+    var newUrl = location.pathname + "?" + params.toString();
+    history.replaceState(null, "", newUrl);
+  }
+
+  function readUrlState() {
+    var params = new URLSearchParams(location.search);
+    var field = params.get("field");
+    if (!field) return null;
+    var liveParam = params.get("live");
+    return {
+      field: field,
+      goal: params.get("goal") || "",
+      live: liveParam === null ? true : (liveParam === "1" || liveParam === "true")
+    };
+  }
+
+  function updateTitle(field) {
+    document.title = field
+      ? "The 20% of " + field + " that matters — Pareto Core"
+      : "Pareto · Core Finder — find the 20% that matters";
+  }
+
+  // ---- run --------------------------------------------------------------
+  function run() {
+    var field = fieldEl.value.trim();
+    var goal = goalEl.value.trim();
+    var live = liveEl.checked;
+
+    clearBanner();
+    if (!field) {
+      setBanner("err", "<b>Enter a field first.</b> Try a technology, skill, or subject — e.g. “PostgreSQL” or “product management”.");
+      fieldEl.focus();
+      return;
+    }
+
+    updateUrl(field, goal, live);
+    updateTitle(field);
+
+    emptyStateEl.className = "empty-state hidden";
+    resultsEl.className = "results";
+    resultsEl.innerHTML = "";
+    footEl.innerHTML = "";
+    setBusy(true, live);
+
+    var state = {
+      field: field, goal: goal, live: live,
+      sources: [], searchError: null,
+      data: null, model: null,
+      gotSources: false, gotResult: false, errored: false
+    };
+
+    fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field: field, goal: goal, live: live })
+    })
+    .then(function (r) {
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          throw new Error(j.error || ("Request failed (" + r.status + ")."));
+        });
+      }
+      if (r.body && r.body.getReader && window.TextDecoder) {
+        return streamNdjson(r.body.getReader(), state);
+      }
+      return r.text().then(function (text) { processLines(text, state); });
+    })
+    .then(function () {
+      setBusy(false);
+      if (!state.gotResult && !state.errored) {
+        setBanner("err", "<b>The analyzer stopped unexpectedly.</b> Try again.");
+        markLoadingFailed("The analyzer stopped before finishing.");
+      }
+    })
+    .catch(function (e) {
+      setBusy(false);
+      setBanner("err", "<b>Couldn’t reach the analyzer.</b> Check your connection and try again. (" + esc(e.message) + ")");
+      markLoadingFailed("The request failed before this section finished.");
+    });
+  }
+
+  // ---- NDJSON streaming (P0.4) -------------------------------------------
+  function streamNdjson(reader, state) {
+    var decoder = new TextDecoder();
+    var buffer = "";
+    function pump() {
+      return reader.read().then(function (res) {
+        if (res.done) {
+          buffer += decoder.decode();
+          processLines(buffer, state);
+          return;
+        }
+        buffer += decoder.decode(res.value, { stream: true });
+        var lines = buffer.split("\n");
+        buffer = lines.pop();
+        lines.forEach(function (line) { handleEventLine(line, state); });
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  function processLines(text, state) {
+    text.split("\n").forEach(function (line) { handleEventLine(line, state); });
+  }
+
+  function handleEventLine(line, state) {
+    var trimmed = line.trim();
+    if (!trimmed) return;
+    var evt;
+    try { evt = JSON.parse(trimmed); } catch (e) { return; }
+
+    if (evt.type === "sources") {
+      state.gotSources = true;
+      state.sources = evt.sources || [];
+      state.searchError = evt.searchError || null;
+      state.live = evt.live;
+      renderShell(state);
+    } else if (evt.type === "result") {
+      state.gotResult = true;
+      state.data = evt.data || {};
+      state.model = evt.model;
+      fillResult(state);
+    } else if (evt.type === "error") {
+      state.errored = true;
+      setBusy(false);
+      setBanner("err", "<b>" + esc(evt.error || "Something went wrong.") + "</b>");
+      markLoadingFailed(evt.error || "This section couldn't be completed.");
+    }
+  }
+
+  function markLoadingFailed(message) {
+    ["core-body", "landscape-body"].forEach(function (id) {
+      var el = $(id);
+      if (el && el.getAttribute("aria-busy") === "true") {
+        el.setAttribute("aria-busy", "false");
+        el.innerHTML = '<div class="empty-note">' + esc(message) + '</div>';
+      }
+    });
+  }
+
+  function skeletonCard() {
+    return '<div class="skeleton-card" aria-hidden="true"><div class="sk-line w60"></div><div class="sk-line w90"></div><div class="sk-line w40"></div></div>';
+  }
+
+  // ---- shell: renders as soon as the "sources" event arrives ------------
+  function renderShell(state) {
+    if (state.searchError) {
+      setBanner("warn", "<b>Live sources unavailable —</b> " + esc(state.searchError) + " Showing the stable core only.");
+    } else {
+      clearBanner();
+    }
+
+    var html = "";
+
+    html += '<div class="rhead">';
+    html += '<div class="subject"><span id="subject-text">' + esc(state.field) + '</span>';
+    html += '<small id="subject-sub">' + esc(state.goal || "general purpose") + '</small></div>';
+    html += '<div class="rhead-actions">';
+    html += '<button class="copy-btn" id="copy-link">Copy link</button>';
+    html += '<button class="copy-btn" id="copy-md" disabled>Copy as Markdown</button>';
+    html += '<button class="copy-btn" id="copy" disabled>Copy JSON</button>';
+    html += '</div></div>';
+
+    html += '<div class="sec" id="core-sec">';
+    html += '<div class="sec-head"><span class="sec-title">Stable core</span><span class="sec-meta">suggested order to learn</span><span class="sec-rule"></span></div>';
+    html += '<div class="loading-block" id="core-body" aria-busy="true">' + skeletonCard() + skeletonCard() + '</div></div>';
+
+    html += '<div class="sec" id="landscape-sec">';
+    html += '<div class="sec-head"><span class="sec-title">Current landscape</span><span class="sec-meta">live · ' + new Date().getFullYear() + ' · source-backed</span><span class="sec-rule"></span></div>';
+    html += '<div class="loading-block" id="landscape-body" aria-busy="true">' + skeletonCard() + '</div></div>';
+
+    html += '<div id="extra-secs"></div>';
+
+    if (state.sources.length) {
+      html += '<div class="sec" id="sources-sec">';
+      html += '<div class="sec-head"><span class="sec-title">Sources searched</span><span class="sec-meta">verify the claims yourself</span><span class="sec-rule"></span></div>';
+      html += '<ul class="srclist">';
+      state.sources.forEach(function (s, i) {
+        html += '<li><span class="n">' + (i + 1) + '</span><span class="body">';
+        html += '<a class="ttl" href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(s.title || s.url) + '</a>';
+        html += '<div class="dom">' + esc(domainOf(s.url)) + (s.published_date ? ' · ' + esc(s.published_date) : '') + '</div>';
+        html += '</span></li>';
+      });
+      html += '</ul></div>';
+    }
+
+    resultsEl.innerHTML = html;
+    resultsEl.className = "results on";
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    var copyLinkBtn = $("copy-link");
+    if (copyLinkBtn) {
+      copyLinkBtn.addEventListener("click", function () { copyText(location.href, copyLinkBtn, "Copy link"); });
+    }
+  }
+
+  // ---- fill: renders once the "result" event arrives ---------------------
+  function fillResult(state) {
+    var data = state.data || {};
+    var stable = Array.isArray(data.stable_core) ? data.stable_core : [];
+    var current = Array.isArray(data.current_landscape) ? data.current_landscape : [];
+    var cuts = Array.isArray(data.explicitly_deprioritized) ? data.explicitly_deprioritized : [];
+
+    var subjectText = $("subject-text"), subjectSub = $("subject-sub");
+    if (subjectText) subjectText.textContent = data.field || state.field;
+    if (subjectSub) subjectSub.textContent = data.goal_context || state.goal || "general purpose";
+
+    // stable core — foundational-first order, numbered (P0.5)
+    var coreBody = $("core-body");
+    if (coreBody) {
+      coreBody.setAttribute("aria-busy", "false");
+      if (stable.length) {
+        var ch = "";
+        stable.forEach(function (it, idx) {
+          var cc = confClass(it.confidence);
+          ch += '<article class="card ' + cc + '">';
+          ch += '<div class="card-top"><span class="card-title-group"><span class="step">' + pad2(idx + 1) + '</span><span class="card-item">' + esc(it.item) + '</span></span>';
+          ch += '<span class="conf ' + cc + '">' + esc(it.confidence || "—") + '</span></div>';
+          if (it.what_it_is) ch += '<p class="card-what">' + esc(it.what_it_is) + '</p>';
+          if (it.why_high_leverage) ch += '<p class="card-why"><b>Why it\'s high-leverage.</b> ' + esc(it.why_high_leverage) + '</p>';
+          ch += '</article>';
+        });
+        coreBody.innerHTML = ch;
+      } else {
+        coreBody.innerHTML = '<div class="empty-note">No stable core returned — the field may be too narrow or ambiguous to compress. Try a broader name.</div>';
+      }
+    }
+
+    // current landscape
+    var landscapeBody = $("landscape-body");
+    if (landscapeBody) {
+      landscapeBody.setAttribute("aria-busy", "false");
+      if (current.length) {
+        var lh = "";
+        current.forEach(function (it) {
+          lh += '<article class="card">';
+          lh += '<div class="card-top"><span class="card-item">' + esc(it.item) + '</span></div>';
+          if (it.what_it_is) lh += '<p class="card-what">' + esc(it.what_it_is) + '</p>';
+          if (it.why_high_leverage) lh += '<p class="card-why"><b>Why it matters now.</b> ' + esc(it.why_high_leverage) + '</p>';
+          if (it.source_url) {
+            lh += '<a class="src-pill" href="' + esc(it.source_url) + '" target="_blank" rel="noopener">' +
+                    esc(domainOf(it.source_url)) + ' ↗' +
+                    (it.source_date ? ' <span class="dt">· ' + esc(it.source_date) + '</span>' : '') + '</a>';
+          }
+          lh += '</article>';
+        });
+        landscapeBody.innerHTML = lh;
+      } else {
+        var reason = state.live
+          ? "Search returned nothing usable for this one — try a broader field name."
+          : "Run with “Fetch live sources” on to pull what's trending, latest versions, and recent shifts.";
+        landscapeBody.innerHTML = '<div class="empty-note">No current-landscape items. ' + esc(reason) + '</div>';
+      }
+    }
+
+    // deprioritized + caveats
+    var extra = "";
+    if (cuts.length) {
+      extra += '<div class="sec">';
+      extra += '<div class="sec-head"><span class="sec-title">Consciously cut</span><span class="sec-meta">deprioritized on purpose, not missing</span><span class="sec-rule"></span></div>';
+      extra += '<div class="cuts">';
+      cuts.forEach(function (c) {
+        extra += '<span class="cut"><span class="x">cut</span><span class="t">' + esc(c) + '</span></span>';
+      });
+      extra += '</div></div>';
+    }
+    if (data.caveats) {
+      extra += '<div class="sec">';
+      extra += '<div class="sec-head"><span class="sec-title">Caveats</span><span class="sec-rule"></span></div>';
+      extra += '<div class="caveat">' + esc(data.caveats) + '</div>';
+      extra += '</div>';
+    }
+    var extraSecs = $("extra-secs");
+    if (extraSecs) extraSecs.innerHTML = extra;
+
+    footEl.innerHTML = "Synthesis by <b>" + esc(state.model || "Groq") + "</b> · " +
+      (state.live ? "live sources on" : "stable-only mode") +
+      " · This is a prioritization aid, not gospel — follow the source links and sanity-check before you commit a syllabus to it.";
+
+    var copyBtn = $("copy");
+    if (copyBtn) {
+      copyBtn.disabled = false;
+      copyBtn.addEventListener("click", function () {
+        copyText(JSON.stringify(data, null, 2), copyBtn, "Copy JSON");
+      });
+    }
+    var copyMdBtn = $("copy-md");
+    if (copyMdBtn) {
+      copyMdBtn.disabled = false;
+      copyMdBtn.addEventListener("click", function () {
+        copyText(buildMarkdown(state), copyMdBtn, "Copy as Markdown");
+      });
+    }
+  }
+
+  // ---- Markdown export (P0.6) --------------------------------------------
+  function buildMarkdown(state) {
+    var data = state.data || {};
+    var stable = Array.isArray(data.stable_core) ? data.stable_core : [];
+    var current = Array.isArray(data.current_landscape) ? data.current_landscape : [];
+    var cuts = Array.isArray(data.explicitly_deprioritized) ? data.explicitly_deprioritized : [];
+    var lines = [];
+
+    lines.push("# " + (data.field || state.field) + " — the 20% that matters");
+    lines.push("");
+    lines.push("_Goal: " + (data.goal_context || state.goal || "general purpose") + "_");
+    lines.push("");
+    lines.push("## Learn first (stable core)");
+    lines.push("");
+    if (stable.length) {
+      stable.forEach(function (it, idx) {
+        lines.push("- [ ] **" + (idx + 1) + ". " + (it.item || "") + "** _(confidence: " + (it.confidence || "—") + ")_");
+        if (it.what_it_is) lines.push("  " + it.what_it_is);
+        if (it.why_high_leverage) lines.push("  Why: " + it.why_high_leverage);
+        lines.push("");
+      });
+    } else {
+      lines.push("_No stable core returned._");
+      lines.push("");
+    }
+
+    lines.push("## Current landscape");
+    lines.push("");
+    if (current.length) {
+      current.forEach(function (it) {
+        var head = "- **" + (it.item || "") + "**";
+        if (it.source_url) head += " — [source](" + it.source_url + ")" + (it.source_date ? " (" + it.source_date + ")" : "");
+        lines.push(head);
+        if (it.what_it_is) lines.push("  " + it.what_it_is);
+        if (it.why_high_leverage) lines.push("  Why it matters now: " + it.why_high_leverage);
+        lines.push("");
+      });
+    } else {
+      lines.push("_No current-landscape items._");
+      lines.push("");
+    }
+
+    if (cuts.length) {
+      lines.push("## Skip for now");
+      lines.push("");
+      cuts.forEach(function (c) { lines.push("- ~~" + c + "~~"); });
+      lines.push("");
+    }
+
+    if (data.caveats) {
+      lines.push("## Caveats");
+      lines.push("");
+      lines.push(data.caveats);
+      lines.push("");
+    }
+
+    if (state.sources && state.sources.length) {
+      lines.push("## Sources");
+      lines.push("");
+      state.sources.forEach(function (s, i) {
+        lines.push((i + 1) + ". [" + (s.title || s.url) + "](" + s.url + ")" + (s.published_date ? " — " + s.published_date : ""));
+      });
+      lines.push("");
+    }
+
+    lines.push("---");
+    lines.push("_Generated by Pareto Core Finder · " + location.href + "_");
+    return lines.join("\n");
+  }
+
+  // ---- wire up ------------------------------------------------------------
+  goEl.addEventListener("click", run);
+  [fieldEl, goalEl].forEach(function (el) {
+    el.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } });
+  });
+
+  if (chipsEl) {
+    chipsEl.addEventListener("click", function (e) {
+      var btn = e.target.closest(".chip");
+      if (!btn) return;
+      fieldEl.value = btn.getAttribute("data-field") || btn.textContent;
+      run();
+    });
+  }
+
+  // animate the signature ratio bar in on load
+  window.addEventListener("load", function () {
+    setTimeout(function () { ratioVital.style.width = "20%"; }, 260);
+  });
+
+  // restore from URL (P0.1) — auto-run if a field is present
+  var urlState = readUrlState();
+  if (urlState) {
+    fieldEl.value = urlState.field;
+    goalEl.value = urlState.goal;
+    liveEl.checked = urlState.live;
+    run();
+  }
+})();
+</script>
+</body>
+</html>
