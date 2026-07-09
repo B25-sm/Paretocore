@@ -15,9 +15,20 @@
 //   TAVILY_API_KEY  (required only when "Fetch live sources" is on)
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-// llama-3.3-70b-versatile was deprecated on Groq (June 2026). openai/gpt-oss-120b
-// is the recommended production replacement. Swap this one line to change models.
-const GROQ_MODEL = "openai/gpt-oss-120b";
+// Fallback chain, tried in order. Groq's free tier caps each model separately
+// (see console.groq.com/docs/rate-limits, checked 2026-07-09), so a model
+// hitting its own daily/per-minute cap doesn't mean the others are unavailable.
+// Only comparable-capability models are listed here on purpose — smaller/faster
+// models (e.g. gpt-oss-20b, llama-3.1-8b-instant) are deliberately excluded so a
+// rate limit never silently trades accuracy for uptime. If every model below is
+// exhausted, the request fails with a clear error instead of degrading further.
+//   1. openai/gpt-oss-120b       — largest, current default (200K TPD)
+//   2. llama-3.3-70b-versatile   — comparable-capability 70B model (100K TPD)
+//   3. qwen/qwen3-32b            — smaller but still strong reasoning (500K TPD, preview)
+// Note: `reasoning_effort` is an openai/gpt-oss-only param — Groq 400s on it for
+// llama/qwen models (verified directly against the API), so it's applied
+// conditionally in callGroq(), not globally.
+const GROQ_MODELS = ["openai/gpt-oss-120b", "llama-3.3-70b-versatile", "qwen/qwen3-32b"];
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const TAVILY_URL = "https://api.tavily.com/search";
 const SEARCH_DEPTH = "advanced"; // "basic" = 1 Tavily credit/search, "advanced" = 2
@@ -111,40 +122,18 @@ module.exports = async (req, res) => {
   const haveSources = sources.length > 0;
   const userMsg = buildUserMessage(field, goal, haveSources, sources);
 
-  // 2) Groq synthesis — json mode first, then graceful fallbacks.
-  let parsed = null, rawForDebug = "";
+  // 2) Groq synthesis — walks the fallback chain, retrying json mode then plain
+  //    then a stricter plain retry on each model before moving to the next.
+  let synth;
   try {
-    const content = await callGroq({ system: SYSTEM_PROMPT, user: userMsg, key: GROQ_API_KEY, jsonMode: true });
-    rawForDebug = content;
-    parsed = extractJson(content);
+    synth = await synthesizeWithFallback(SYSTEM_PROMPT, userMsg, GROQ_API_KEY);
   } catch (e) {
-    // json mode may be unsupported for this model — retry plain.
-    try {
-      const content = await callGroq({ system: SYSTEM_PROMPT, user: userMsg, key: GROQ_API_KEY, jsonMode: false });
-      rawForDebug = content;
-      parsed = extractJson(content);
-    } catch (e2) {
-      emit({ type: "error", error: friendlyGroqError(e2) });
-      return res.end();
-    }
-  }
-
-  // Parsed but malformed — one stricter retry.
-  if (!parsed) {
-    try {
-      const strict = userMsg + "\n\nIMPORTANT: Output ONLY the raw JSON object. No prose, no markdown, no code fences.";
-      const content = await callGroq({ system: SYSTEM_PROMPT, user: strict, key: GROQ_API_KEY, jsonMode: false });
-      rawForDebug = content;
-      parsed = extractJson(content);
-    } catch (e) { /* fall through */ }
-  }
-
-  if (!parsed) {
-    emit({ type: "error", error: "The model didn't return usable JSON after retries. Try a clearer or broader field name." });
+    emit({ type: "error", error: friendlyGroqError(e) });
     return res.end();
   }
 
   // 3) Normalize so the UI never crashes on a missing field.
+  const parsed = synth.parsed;
   const data = {
     field: parsed.field || field,
     goal_context: parsed.goal_context || goal || "general purpose",
@@ -154,7 +143,7 @@ module.exports = async (req, res) => {
     caveats: parsed.caveats || ""
   };
 
-  emit({ type: "result", data: data, model: GROQ_MODEL });
+  emit({ type: "result", data: data, model: synth.model });
   res.end();
 };
 
@@ -299,17 +288,23 @@ function buildUserMessage(field, goal, haveSources, sources) {
 }
 
 // ─── Groq ─────────────────────────────────────────────────────────────────────
+// reasoning_effort is only accepted by the openai/gpt-oss-* family — Groq 400s
+// on it for llama/qwen models (verified directly against the API).
+function supportsReasoningEffort(model) {
+  return model.indexOf("openai/gpt-oss") === 0;
+}
+
 async function callGroq(opts) {
   const bodyObj = {
-    model: GROQ_MODEL,
+    model: opts.model,
     messages: [
       { role: "system", content: opts.system },
       { role: "user", content: opts.user }
     ],
     temperature: 0.3,
-    max_tokens: 4000,
-    reasoning_effort: "medium"
+    max_tokens: 4000
   };
+  if (supportsReasoningEffort(opts.model)) bodyObj.reasoning_effort = "medium";
   if (opts.jsonMode) bodyObj.response_format = { type: "json_object" };
 
   const r = await fetch(GROQ_URL, {
@@ -320,7 +315,7 @@ async function callGroq(opts) {
 
   const text = await r.text();
   if (!r.ok) {
-    const err = new Error(`Groq ${r.status}: ${text.slice(0, 300)}`);
+    const err = new Error(`Groq ${r.status} (${opts.model}): ${text.slice(0, 300)}`);
     err.status = r.status;
     throw err;
   }
@@ -328,10 +323,56 @@ async function callGroq(opts) {
   return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
 }
 
+// Tries each model in GROQ_MODELS in order (json mode -> plain -> stricter
+// plain retry per model), moving to the next model only when the failure looks
+// like a capacity/availability issue (429 rate limit, 404 model unavailable,
+// 5xx) or the model just never produced parseable JSON. A bad key (401) stops
+// immediately — no other model will succeed with it either.
+async function synthesizeWithFallback(system, userMsg, key) {
+  const attempts = []; // { model, status } per failed model, for an honest combined error
+  for (let i = 0; i < GROQ_MODELS.length; i++) {
+    const model = GROQ_MODELS[i];
+    try {
+      let content;
+      try {
+        content = await callGroq({ system: system, user: userMsg, key: key, model: model, jsonMode: true });
+      } catch (e) {
+        if (e.status === 401) throw e;
+        content = await callGroq({ system: system, user: userMsg, key: key, model: model, jsonMode: false });
+      }
+
+      let parsed = extractJson(content);
+      if (!parsed) {
+        const strict = userMsg + "\n\nIMPORTANT: Output ONLY the raw JSON object. No prose, no markdown, no code fences.";
+        content = await callGroq({ system: system, user: strict, key: key, model: model, jsonMode: false });
+        parsed = extractJson(content);
+      }
+
+      if (parsed) return { parsed: parsed, model: model };
+      attempts.push({ model: model, status: "unparseable" });
+    } catch (e) {
+      if (e.status === 401) throw e; // bad key — trying another model won't help
+      attempts.push({ model: model, status: e.status || "error" });
+    }
+    // else: fall through to the next model in the chain
+  }
+  const err = new Error("All models in the fallback chain failed.");
+  err.attempts = attempts;
+  throw err;
+}
+
 function friendlyGroqError(e) {
   if (e.status === 401) return "Groq rejected the API key (401). Check GROQ_API_KEY.";
+  if (Array.isArray(e.attempts) && e.attempts.length) {
+    const summary = e.attempts.map(function (a) { return `${a.model} (${a.status})`; }).join(", ");
+    const allRateLimited = e.attempts.every(function (a) { return a.status === 429; });
+    if (allRateLimited) {
+      return `All ${e.attempts.length} fallback models hit Groq's rate limit (429): ${summary}. The free tier resets daily — wait a bit and retry.`;
+    }
+    return `Every model in the fallback chain failed: ${summary}. Try again shortly.`;
+  }
   if (e.status === 429) return "Groq rate limit hit (429). The free tier allows a limited number of requests per day — wait a bit and retry.";
-  if (e.status === 404) return `Groq couldn't find the model "${GROQ_MODEL}" (404). It may have been deprecated — update GROQ_MODEL in api/analyze.js.`;
+  if (e.status === 404) return "Groq couldn't find one of the configured models (404). It may have been renamed or deprecated — check GROQ_MODELS in api/analyze.js against console.groq.com/docs/models.";
   return "Model request failed: " + e.message;
 }
 

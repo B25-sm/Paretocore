@@ -55,7 +55,7 @@ Then add `GROQ_API_KEY` and `TAVILY_API_KEY` under **Project → Settings → En
 
 ## Config knobs (`api/analyze.js`)
 
-- `GROQ_MODEL` — one line. If Groq deprecates the current model, swap it here.
+- `GROQ_MODELS` — an ordered fallback chain, not a single model. On a rate limit (429), model-unavailable (404), or a model that never returns parseable JSON, the request cascades to the next model in the list before failing. Only comparable-capability models are listed (`openai/gpt-oss-120b` → `llama-3.3-70b-versatile` → `qwen/qwen3-32b`) — smaller/faster models are deliberately left out so a rate limit never silently trades accuracy for uptime. The response always reports which model actually served it (see the footer / `model` field), never just the configured primary. If you add a model to the chain, verify it first — Groq's `reasoning_effort` param, for example, is `openai/gpt-oss-*`-only and 400s on llama/qwen models (already handled conditionally in `callGroq`, but a new model may have its own quirks). Current free-tier limits: console.groq.com/docs/rate-limits.
 - `SEARCH_DEPTH` — `"basic"` (1 Tavily credit/search) or `"advanced"` (2 credits, higher relevance).
 - `PER_QUERY_RESULTS` — results requested per Tavily query.
 - `MAX_RESULTS` — cap on sources fed to the model after merging + deduping.
