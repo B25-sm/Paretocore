@@ -10,7 +10,8 @@ Static frontend + one serverless function. No build step, no frontend dependenci
 pareto-core/
 ├─ index.html          # the whole UI (vanilla HTML/CSS/JS)
 ├─ api/
-│  └─ analyze.js       # serverless function: Tavily search → Groq synthesis
+│  ├─ analyze.js       # serverless function: Tavily search → Groq synthesis
+│  └─ ask.js           # scoped follow-up Q&A on an analysis already produced
 ├─ vercel.json         # bumps the function timeout to 60s
 └─ .env.example        # which env vars to set
 ```
@@ -24,6 +25,10 @@ pareto-core/
 5. The response streams back as newline-delimited JSON events — `{type:"sources"}` as soon as search finishes, then `{type:"result"}` once synthesis completes — so the browser can show sources immediately and fill in the rest as it arrives.
 
 Keys stay server-side in environment variables. Nothing sensitive is exposed to the browser, which also sidesteps the CORS walls that Tavily/Groq put up against direct browser calls.
+
+### Ask a follow-up (`api/ask.js`)
+
+Once a result renders, an "Ask a follow-up" box appears. This is **deliberately not a general chatbot** — the product brief calls that out as a non-goal. Each question is a single, stateless request: the browser sends the field/goal, the analysis already produced (`stable_core`, `current_landscape`, `explicitly_deprioritized`, `caveats`), and a lightweight source list (title/url/date, no excerpts) back to `/api/ask`. The model answers using only that — no new search, no new facts, and if the question asks about something the analysis didn't cover, it says so instead of guessing. No conversation history is kept or resent between questions. Citations are checked server-side against the sources actually provided; a citation for a URL that wasn't in that list gets silently dropped before reaching the browser, whatever the model claims. It shares the same accuracy-first `GROQ_MODELS` fallback chain as `/api/analyze` — kept as a self-contained duplicate in `api/ask.js` rather than a shared helper file, so there's no dependency on Vercel's file-based function bundling behaving a particular way for non-route files.
 
 ## Setup
 
